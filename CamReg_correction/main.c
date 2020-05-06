@@ -20,6 +20,7 @@
 
 #include <pi_regulator.h>
 #include <process_image.h>
+#include <obstacle.h>
 
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
@@ -48,11 +49,15 @@ static void serial_start(void)
 int main(void)
 {
 
+	//INITIALISATION
     halInit();
     chSysInit();
     mpu_init();
     messagebus_init(&bus, &bus_lock, &bus_condvar);
+	//inits the motors
+	motors_init();
 
+	//COMMUNICATION
     //starts the serial communication
     serial_start();
     //start the USB communication
@@ -60,40 +65,39 @@ int main(void)
     //start the SPI communication
     spi_comm_start();
 
+    //CAMERA
     //starts the camera
     dcmi_start();
 	po8030_start();
 //	po8030_set_brightness(-40);
-	//activer balance des blancs
+	//activate auto white balance
 	po8030_set_awb(1);
 //	po8030_set_rgb_gain(0xB8,0x80,0xB8);
 //	po8030_set_ae(0);
 //	po8030_set_exposure(0x0020, 0x00);
 
-	//inits the motors
-	motors_init();
-
+	//SENSORS
 	//inits the distance sensor
-	VL53L0X_start();
-
-
-	//Powers ON the alimentation of the speaker
-	dac_power_speaker(true);
-	dac_start();
-	playMelodyStart();
-
-//	Starts the proximity measurement module
+	//VL53L0X_start();
+	//	Starts the proximity measurement module
 	proximity_start();
 	calibrate_ir();
 
+	//AUDIO
+	//Powers ON the alimentation of the speaker
+	dac_power_speaker(true);
+	dac_start();
+	//creates the Melody thread
+//	playMelodyStart();
 
+	//THREADS
 	//stars the threads for the pi regulator and the processing of the image
+	obstacle_start();
 	pi_regulator_start();
 	process_image_start();
 
-	//desactiver balance des blancs
+	//inactivate auto white balance
 	po8030_set_awb(0);
-
 
     /* Infinite loop. */
     while (1) {

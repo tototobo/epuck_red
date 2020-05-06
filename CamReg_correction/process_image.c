@@ -22,12 +22,6 @@ bool extract_color_pixel(uint8_t *buffer, uint16_t begin_red, uint16_t end_red, 
 
 	uint32_t mean_target = 0;
 
-//	//performs an average & exclude buffer[0]
-//	for(uint16_t i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
-//		mean_image += buffer[i];
-//	}
-//	mean_image /= IMAGE_BUFFER_SIZE;
-
 	//performs an average & exclude buffer[0]
 	for(uint16_t i = begin_red ; i <= end_red ; i++){
 		mean_target += buffer[i];
@@ -45,7 +39,7 @@ bool extract_color_pixel(uint8_t *buffer, uint16_t begin_red, uint16_t end_red, 
 }
 
 /*
- *  Returns the line's width extracted from the image buffer given
+ *  Returns the width of the wider red line extracted from the image buffer given and defines his position
  *  Returns 0 if line not found
  */
 uint16_t extract_line_position_width (uint8_t *buffer){
@@ -72,7 +66,7 @@ uint16_t extract_line_position_width (uint8_t *buffer){
 		        direct_end=0;
 		        break;
 		    }
-////		    no begin but an end
+		    //no begin but an end
 		    else if (buffer[i] > THRESHOLD_RED && buffer[i+WIDTH_SLOPE] <THRESHOLD_RED && direct_end){
 		    		begin = 0;
 		    		end = i;
@@ -115,7 +109,7 @@ uint16_t extract_line_position_width (uint8_t *buffer){
 		}
 		mean_red_object /= (end-begin);
 
-		//if bigger object and really red, compare with other colors to see confirm if red
+		//if bigger object and really red, compare with other colors to confirm the red color
 		if(end-begin>last_width){
 
 			//blue analysis////////////////
@@ -123,7 +117,7 @@ uint16_t extract_line_position_width (uint8_t *buffer){
 			uint8_t buffer_color[IMAGE_BUFFER_SIZE] = {0};
 			//gets the pointer to the array filled with the last image in RGB565
 			uint8_t *img_buff_ptr_color = dcmi_get_last_image_ptr();
-	//
+
 	//		Extracts only the blue pixels
 			for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2)
 			{
@@ -146,7 +140,7 @@ uint16_t extract_line_position_width (uint8_t *buffer){
 
 			color_green = extract_color_pixel(buffer_color, begin, end, mean_red_object);
 
-
+			//if the object is not also blue or green, it is definitively red and we can save his position
 			if(!color_blue && !color_green){
 				last_width = end-begin;
 				line_position=(begin + end)/2;
@@ -157,15 +151,9 @@ uint16_t extract_line_position_width (uint8_t *buffer){
 
 	if(line_position){
 		width = last_width;
-//		chprintf((BaseSequentialStream *)&SDU1, "line_position = %d\n\r", line_position);
 	}
 
-	//sets a maximum width or returns the measured width
-	if((PXTOCM/width) > MAX_DISTANCE){
-		return PXTOCM/MAX_DISTANCE;
-	}else{
-		return width;
-	}
+	return width;
 }
 
 
@@ -206,8 +194,6 @@ static THD_FUNCTION(ProcessImage, arg) {
     (void)arg;
 
 	uint8_t *img_buff_ptr;
-//	main_value=0;
-//	counter_no_line= 0;
 	uint8_t image[IMAGE_BUFFER_SIZE] = {0};
 	uint16_t lineWidth = 0;
 
@@ -242,9 +228,6 @@ static THD_FUNCTION(ProcessImage, arg) {
 		if(lineWidth){
 			distance_cm = PXTOCM/lineWidth;
 		}
-
-//		chprintf((BaseSequentialStream *)&SDU1, "line = %d\n\r", !no_line);
-
 	}
 }
 
@@ -258,6 +241,5 @@ uint16_t get_line_position(void){
 
 void process_image_start(void){
 	chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO, ProcessImage, NULL);
-//	chThdCreateStatic(waProcessImageBlue, sizeof(waProcessImageBlue), NORMALPRIO, ProcessImageBlue, NULL);
 	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO, CaptureImage, NULL);
 }
