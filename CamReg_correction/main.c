@@ -66,7 +66,9 @@ int main(void)
 //	po8030_set_brightness(-40);
 	//activer balance des blancs
 	po8030_set_awb(1);
-//	po8030_set_ae(1);
+//	po8030_set_rgb_gain(0xB8,0x80,0xB8);
+//	po8030_set_ae(0);
+//	po8030_set_exposure(0x0020, 0x00);
 
 	//inits the motors
 	motors_init();
@@ -78,7 +80,7 @@ int main(void)
 	//Powers ON the alimentation of the speaker
 	dac_power_speaker(true);
 	dac_start();
-//	playMelodyStart();
+	playMelodyStart();
 
 //	Starts the proximity measurement module
 	proximity_start();

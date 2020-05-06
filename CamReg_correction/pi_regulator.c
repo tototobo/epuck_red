@@ -65,10 +65,11 @@ static THD_FUNCTION(PiRegulator, arg) {
     (void)arg;
 
     int16_t speed = 0;
-    int16_t speed_correction = 0;
+    uint32_t speed_correction = 0;
     uint16_t obstacle = 0;
     uint16_t distance_mm=0;
     uint8_t rgb_state = 0, rgb_counter = 0;
+    int8_t direct_rot=-1;
 
     systime_t time;
 
@@ -91,7 +92,7 @@ static THD_FUNCTION(PiRegulator, arg) {
 							case 1:
 							case 8:
 							speed = -SPEED_VALUE;
-							speed_correction = ROTATION_SPEED;
+							speed_correction = 0;
 								break;
 
 							case 2:
@@ -136,7 +137,7 @@ static THD_FUNCTION(PiRegulator, arg) {
 						}
 
 						speed=0;
-						speed_correction = ROTATION_SPEED;
+						speed_correction = direct_rot*ROTATION_SPEED;
 //						dac_stop();
 						stopCurrentMelody();
 					}
@@ -149,18 +150,25 @@ static THD_FUNCTION(PiRegulator, arg) {
 						set_rgb_led(2, 10, 0, 0);
 						set_rgb_led(3, 10, 0, 0);
 
+						if(get_line_position()<(IMAGE_BUFFER_SIZE/2)){
+							direct_rot=-1;
+						}
+						else{
+							direct_rot=1;
+						}
+
 						//computes the speed to give to the motors
 						//distance_cm is modified by the image processing thread
 						speed = pi_regulator(get_distance_cm());
 						//computes a correction factor to let the robot rotate to be in front of the line
-						speed_correction = 2*(get_line_position() - (IMAGE_BUFFER_SIZE/2));
+						speed_correction = 4*(get_line_position() - (IMAGE_BUFFER_SIZE/2));
 
-						//if the line is nearly in front of the camera, don't rotate
-						if(abs(speed_correction) < ROTATION_THRESHOLD){
-							speed_correction = 0;
-						}
+//						//if the line is nearly in front of the camera, don't rotate
+//						if(abs(speed_correction) < ROTATION_THRESHOLD){
+//							speed_correction = 0;
+//						}
 //						dac_play(SOUND_FREQ);
-						playMelody(PIRATES_OF_THE_CARIBBEAN, ML_SIMPLE_PLAY, NULL);
+						playMelody(PASO_DOBLE, ML_SIMPLE_PLAY, NULL);
 					}
 
 					//applies the speed from the PI regulator and the correction for the rotation
