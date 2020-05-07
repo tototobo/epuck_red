@@ -15,7 +15,6 @@ extern "C" {
 #include <leds.h>
 
 
-
 //constants for the differents parts of the project
 #define IMAGE_BUFFER_SIZE		640
 #define WIDTH_SLOPE				5
@@ -27,7 +26,7 @@ extern "C" {
 #define ERROR_THRESHOLD			0.1f //[cm] because of the noise of the camera
 #define KP						400.0f
 #define MAX_SUM_ERROR 			(MOTOR_SPEED_LIMIT/KI)
-#define SPEED_VALUE				500.0f
+#define SPEED_VALUE				300.0f
 #define ROTATION_SPEED			25
 #define SOUND_FREQ 				220.0f
 #define COEFF_MEAN				1.5
@@ -36,6 +35,9 @@ extern "C" {
 #define COEFF_COLOR				0.75
 #define FRONT_LED				GPIOD, 14
 #define PROXIMITY_THRESHOLD   	300
+
+
+
 
 
 

@@ -17,8 +17,8 @@
 #include <sensors/VL53L0X/VL53L0X.h>
 #include <spi_comm.h>
 #include <leds.h>
+#include <move.h>
 
-#include <pi_regulator.h>
 #include <process_image.h>
 #include <obstacle.h>
 
