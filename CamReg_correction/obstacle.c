@@ -8,27 +8,31 @@
 #include <obstacle.h>
 #include "sensors/proximity.h"
 
-static uint16_t obstacle = 0;
+static uint8_t obstacle = 0;
 
 /**
  *  Defines the IR sensor which detects an obstacle in the vicinity
  * 	Returns the sensor number (from 1 to 8) or 0 if there is no obstacle
  */
-uint16_t search_obstacle(void){
+uint8_t search_obstacle(void){
 
 	int sensors [8];
+	unit8_t sensor_num = 0;
 	//takes all the value given by the proximity sensors and put them in a table
 	for (unsigned int i=0; i<8 ; i++){
 	sensors [i] = get_prox(i);
 	}
 
-	// compares the sensor's value with the threshold and returns the sensor number
+	//compares the sensor's value with the threshold and returns the sensor number
 	for (unsigned int i=0; i<8 ; i++){
-		if(sensors[i]>PROXIMITY_THRESHOLD){
-			return i+1;
+		if(sensors[i]>sensors[sensor_num]){
+			sensor_num=i;
 		}
 	}
-	return 0;
+	if(sensors[sensor_num]>PROXIMITY_THRESHOLD){
+		return sensor_num+1;
+	}
+	else return 0;
 }
 
 
