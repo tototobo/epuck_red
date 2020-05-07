@@ -9,24 +9,25 @@ extern "C" {
 #include "msgbus/messagebus.h"
 #include "parameter/parameter.h"
 #include "audio/audio_thread.h"
-#include <audio/play_melody.h>
+#include "audio/play_melody.h"
 #include "sensors/proximity.h"
-#include <sensors/VL53L0X/VL53L0X.h>
-#include <leds.h>
+#include "sensors/VL53L0X/VL53L0X.h"
+#include "leds.h"
 
 
 //constants for the differents parts of the project
 #define IMAGE_BUFFER_SIZE		640
 #define WIDTH_SLOPE				5
 #define MIN_LINE_WIDTH			40
-#define ROTATION_THRESHOLD		5
+#define ROTATION_THRESHOLD		30
 #define ROTATION_COEFF			2
 #define PXTOCM					1570.0f //experimental value
 #define MAX_DISTANCE 			25.0f
 #define ERROR_THRESHOLD			0.1f //[cm] because of the noise of the camera
-#define KP						400.0f
+#define KP						2
+#define KI						2
 #define MAX_SUM_ERROR 			(MOTOR_SPEED_LIMIT/KI)
-#define SPEED_VALUE				300.0f
+#define SPEED_VALUE				500.0f
 #define ROTATION_SPEED			25
 #define SOUND_FREQ 				220.0f
 #define COEFF_MEAN				1.5

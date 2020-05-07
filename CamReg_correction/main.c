@@ -88,7 +88,7 @@ int main(void)
 	dac_power_speaker(true);
 	dac_start();
 	//creates the Melody thread
-//	playMelodyStart();
+	playMelodyStart();
 
 	//THREADS
 	//stars the threads for the pi regulator and the processing of the image
@@ -101,6 +101,7 @@ int main(void)
 
     /* Infinite loop. */
     while (1) {
+//    	chprintf((BaseSequentialStream *)&SDU1, "front_sensor_value=%d\n\r", get_front_sensor_value());
     	//waits 1 second
         chThdSleepMilliseconds(1000);
     }
