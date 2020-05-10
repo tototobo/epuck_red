@@ -40,7 +40,7 @@ uint16_t convert_distance (uint16_t sensors){
  */
 uint8_t search_obstacle(void){
 
-	uint16_t sensors [8];
+	uint16_t sensors [NUMBER_OF_SENSORS];
 	uint8_t sensor_num= 0;
 
 	//takes all the value given by the proximity sensors and put them in a table
@@ -49,11 +49,11 @@ uint8_t search_obstacle(void){
 	}
 
 	//take the biggest front sensor value and save it
-	if(sensors[0]>sensors[7]){
-		front_sensor_value=convert_distance(sensors[0]);
+	if(sensors[FRONT_RIGHT_SENSOR]>sensors[FRONT_LEFT_SENSOR]){
+		front_sensor_value=convert_distance(sensors[FRONT_RIGHT_SENSOR]);
 	}
 	else{
-		front_sensor_value=convert_distance(sensors[7]);
+		front_sensor_value=convert_distance(sensors[FRONT_LEFT_SENSOR]);
 	}
 
 	// compares the sensor's value with the threshold and returns the sensor number (0 if no obstacle)

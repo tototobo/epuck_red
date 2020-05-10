@@ -36,14 +36,6 @@ messagebus_t bus;
 MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
 
-// send information to plot python's graph
-void SendUint8ToComputer(uint8_t* data, uint16_t size) 
-{
-	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
-	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&size, sizeof(uint16_t));
-	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)data, size);
-}
-
 static void serial_start(void)
 {
 	static SerialConfig ser_cfg = {
@@ -97,8 +89,8 @@ int main(void)
 
 	//THREADS
 	//stars the threads for the pi regulator and the processing of the image
-//	obstacle_start();
-//	pi_regulator_start();
+	obstacle_start();
+	pi_regulator_start();
 	process_image_start();
 
 	//disable auto white balance

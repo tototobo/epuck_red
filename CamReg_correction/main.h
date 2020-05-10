@@ -48,13 +48,14 @@ extern "C" {
 
 //obstacle constants
 #define PROXIMITY_THRESHOLD   	20 //[mm]
+#define NUMBER_OF_SENSORS		8
+#define FRONT_LEFT_SENSOR		7
+#define FRONT_RIGHT_SENSOR		0
 
 /** Robot wide IPC bus. */
 extern messagebus_t bus;
 
 extern parameter_namespace_t parameter_root;
-
-void SendUint8ToComputer(uint8_t* data, uint16_t size);
 
 #ifdef __cplusplus
 }
