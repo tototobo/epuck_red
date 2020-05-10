@@ -1,3 +1,12 @@
+/*
+
+File    : main.c
+Author  : Thomas Bonnaud & Louis Rosset
+Date    : 10 may 2020
+
+Capture and analyze an image and returns the position of a red object to "move" module.
+
+*/
 #include "ch.h"
 #include "hal.h"
 #include <chprintf.h>
@@ -8,26 +17,24 @@
 
 #include <process_image.h>
 
-
-static float distance_cm = 0;
 static uint16_t line_position = IMAGE_BUFFER_SIZE/2;	//middle
-static uint16_t width = 0;
 
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
 
-//extract blue and green pixels and compare mean with the red slope.
+//compare blue and green means with the red slope where the object is.
 bool extract_color_pixel(uint8_t *buffer, uint16_t begin_red, uint16_t end_red, uint32_t mean_color){
 
 	uint32_t mean_target = 0;
 
-	//performs an average & exclude buffer[0]
+	//performs an average
 	for(uint16_t i = begin_red ; i <= end_red ; i++){
 		mean_target += buffer[i];
 	}
 	mean_target /= (end_red-begin_red);
 
+	//if the object is also green or blue, don't take into account (experimental value of COEFF_COLOR)
 	if(mean_target > COEFF_COLOR * mean_color)
 	{
 		return true;
@@ -42,7 +49,7 @@ bool extract_color_pixel(uint8_t *buffer, uint16_t begin_red, uint16_t end_red, 
  *  Returns the width of the wider red line extracted from the image buffer given and defines his position
  *  Returns 0 if line not found
  */
-uint16_t extract_line_position_width (uint8_t *buffer){
+void extract_line_position(uint8_t *buffer){
 
 	uint16_t i = 0, last_width = 0, begin = 0, end=0;
 	uint8_t line_not_found = 0, direct_end=1;
@@ -59,7 +66,7 @@ uint16_t extract_line_position_width (uint8_t *buffer){
 		while(i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE)){
 		    i++;
 			//the slope must at least be WIDTH_SLOPE wide and is compared
-		    //to the mean of the image
+		    //to the threshold
 		    if(buffer[i] < THRESHOLD_RED && buffer[i+WIDTH_SLOPE] > THRESHOLD_RED)
 		    {
 		        begin = i;
@@ -68,6 +75,7 @@ uint16_t extract_line_position_width (uint8_t *buffer){
 		    }
 		    //no begin but an end
 		    else if (buffer[i] > THRESHOLD_RED && buffer[i+WIDTH_SLOPE] <THRESHOLD_RED && direct_end){
+		    	//the object is at the left edge
 		    		begin = 0;
 		    		end = i;
 		    		break;
@@ -89,6 +97,7 @@ uint16_t extract_line_position_width (uint8_t *buffer){
 		    //if a begin was found and an end was not found
 		    if (!end)
 		    {
+		    	//the object is at the right edge
 		        end=IMAGE_BUFFER_SIZE;
 		    }
 		}
@@ -96,7 +105,7 @@ uint16_t extract_line_position_width (uint8_t *buffer){
 			line_not_found = 1;
 		}
 
-		//		//if a line too small has been detected, continues the search
+		//if a line too small has been detected, continues the search
 		if(!line_not_found && (end-begin) < MIN_LINE_WIDTH){
 			if(end==IMAGE_BUFFER_SIZE)break;
 			begin = 0;
@@ -109,16 +118,16 @@ uint16_t extract_line_position_width (uint8_t *buffer){
 		}
 		mean_red_object /= (end-begin);
 
-		//if bigger object and really red, compare with other colors to confirm the red color
+		//if bigger object and red, compare with other colors to confirm the red color
 		if(end-begin>last_width){
 
-			//blue analysis////////////////
+			//blue analysis//////////////////////
 
 			uint8_t buffer_color[IMAGE_BUFFER_SIZE] = {0};
 			//gets the pointer to the array filled with the last image in RGB565
 			uint8_t *img_buff_ptr_color = dcmi_get_last_image_ptr();
 
-	//		Extracts only the blue pixels
+			//Extracts only the blue pixels
 			for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2)
 			{
 				//extracts last 5bits of the second byte
@@ -148,12 +157,6 @@ uint16_t extract_line_position_width (uint8_t *buffer){
 		}
 		end = 0; begin = 0;
 	}
-
-	if(line_position){
-		width = last_width;
-	}
-
-	return width;
 }
 
 
@@ -163,7 +166,7 @@ static THD_FUNCTION(CaptureImage, arg) {
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
 
-	//Takes pixels 0 to IMAGE_BUFFER_SIZE of the line 10 + 11 (minimum 2 lines because reasons)
+	//Takes pixels 0 to IMAGE_BUFFER_SIZE of the line 100 + 101 (minimum 2 lines because reasons)
 	po8030_advanced_config(FORMAT_RGB565, 0, 100, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1);
 	dcmi_enable_double_buffering();
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
@@ -171,10 +174,6 @@ static THD_FUNCTION(CaptureImage, arg) {
 	dcmi_prepare();
 	//laisser un temps d'adaptation
 	chThdSleepMilliseconds(10);
-//	 //starts a capture
-//	dcmi_capture_start();
-//	//waits for the capture to be done
-//	wait_image_ready();
 
     while(1){
         //starts a capture
@@ -195,7 +194,6 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 	uint8_t *img_buff_ptr;
 	uint8_t image[IMAGE_BUFFER_SIZE] = {0};
-	uint16_t lineWidth = 0;
 
 	bool send_to_computer = true;
 
@@ -221,20 +219,12 @@ static THD_FUNCTION(ProcessImage, arg) {
 		send_to_computer = !send_to_computer;
 		////////////////////////////////////////////////////
 
-		//search for a line in the image and gets its width in pixels
-		lineWidth = extract_line_position_width(image);
+		extract_line_position(image);
 
-		//converts the width into a distance between the robot and the camera
-		if(lineWidth){
-			distance_cm = PXTOCM/lineWidth;
-		}
 	}
 }
 
-float get_distance_cm(void){
-	return distance_cm;
-}
-
+//returns the position of a red object to "move" module
 uint16_t get_line_position(void){
 	return line_position;
 }

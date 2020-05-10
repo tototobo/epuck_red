@@ -1,3 +1,13 @@
+/*
+
+File    : main.c
+Author  : Thomas Bonnaud & Louis Rosset
+Date    : 10 may 2020
+
+Initialize the robot's components and starts the different threads
+
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,18 +24,19 @@
 #include <audio/audio_thread.h>
 #include <audio/play_melody.h>
 #include "sensors/proximity.h"
-#include <sensors/VL53L0X/VL53L0X.h>
 #include <spi_comm.h>
 #include <leds.h>
-#include <move.h>
 
+#include <move.h>
 #include <process_image.h>
 #include <obstacle.h>
+
 
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
 
+// send information to plot python's graph
 void SendUint8ToComputer(uint8_t* data, uint16_t size) 
 {
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
@@ -69,22 +80,16 @@ int main(void)
     //starts the camera
     dcmi_start();
 	po8030_start();
-//	po8030_set_brightness(-40);
-	//activate auto white balance
+	//enable auto white balance
 	po8030_set_awb(1);
-//	po8030_set_rgb_gain(0xB8,0x80,0xB8);
-//	po8030_set_ae(0);
-//	po8030_set_exposure(0x0020, 0x00);
 
 	//SENSORS
-	//inits the distance sensor
-	//VL53L0X_start();
-	//	Starts the proximity measurement module
+	// Starts the proximity measurement module
 	proximity_start();
 	calibrate_ir();
 
 	//AUDIO
-	//Powers ON the alimentation of the speaker
+	// Powers ON the alimentation of the speaker
 	dac_power_speaker(true);
 	dac_start();
 	//creates the Melody thread
@@ -92,16 +97,15 @@ int main(void)
 
 	//THREADS
 	//stars the threads for the pi regulator and the processing of the image
-	obstacle_start();
-	pi_regulator_start();
+//	obstacle_start();
+//	pi_regulator_start();
 	process_image_start();
 
-	//inactivate auto white balance
+	//disable auto white balance
 	po8030_set_awb(0);
 
     /* Infinite loop. */
     while (1) {
-//    	chprintf((BaseSequentialStream *)&SDU1, "front_sensor_value=%d\n\r", get_front_sensor_value());
     	//waits 1 second
         chThdSleepMilliseconds(1000);
     }

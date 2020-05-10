@@ -1,3 +1,13 @@
+/*
+
+File    : main.h
+Author  : Thomas Bonnaud & Louis Rosset
+Date    : 10 may 2020
+
+Initialize the robot's components and starts the different threads
+
+*/
+
 #ifndef MAIN_H
 #define MAIN_H
 
@@ -16,31 +26,28 @@ extern "C" {
 
 
 //constants for the differents parts of the project
+//process_image constants
 #define IMAGE_BUFFER_SIZE		640
 #define WIDTH_SLOPE				5
 #define MIN_LINE_WIDTH			40
+#define COEFF_COLOR				0.75 //experimental value
+#define THRESHOLD_RED			100  //experimental value
+
+//move constants //experimental values
 #define ROTATION_THRESHOLD		30
 #define ROTATION_COEFF			2
-#define PXTOCM					1570.0f //experimental value
-#define MAX_DISTANCE 			25.0f
-#define ERROR_THRESHOLD			0.1f //[cm] because of the noise of the camera
-#define KP						2
-#define KI						2
-#define MAX_SUM_ERROR 			(MOTOR_SPEED_LIMIT/KI)
-#define SPEED_VALUE				500.0f
+#define KP						0.7
+#define KI						0.5
+#define MAX_SUM_ERROR			30
+#define SPEED_VALUE				450.0f
 #define ROTATION_SPEED			25
-#define SOUND_FREQ 				220.0f
-#define COEFF_MEAN				1.5
-#define COEFF_RED				1.1
-#define THRESHOLD_RED			100
-#define COEFF_COLOR				0.75
-#define FRONT_LED				GPIOD, 14
-#define PROXIMITY_THRESHOLD   	300
+#define THRESHOLD_DISTANCE_RED	50 //[mm]
+#define ROT_OBST_COEFF			4
+#define SPEED_OBST_COEFF			3
+#define PERIOD					100
 
-
-
-
-
+//obstacle constants
+#define PROXIMITY_THRESHOLD   	20 //[mm]
 
 /** Robot wide IPC bus. */
 extern messagebus_t bus;

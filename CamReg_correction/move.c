@@ -1,3 +1,12 @@
+/*
+
+File    : main.c
+Author  : Thomas Bonnaud & Louis Rosset
+Date    : 10 may 2020
+
+Set the robot reaction (motors, LED, melody) depending on the environment and context.
+
+*/
 #include "ch.h"
 #include "hal.h"
 #include <math.h>
@@ -12,8 +21,7 @@
 #include <obstacle.h>
 #include "sensors/proximity.h"
 
-//PASO_DOBLE
-
+//PASO_DOBLE SOUND
 //En er Mundo - Paso Doble
 static const uint16_t paso_doble_melody[] = {
   NOTE_E4, NOTE_F4, NOTE_G4, NOTE_F4, NOTE_E4, NOTE_D4,
@@ -37,8 +45,8 @@ static const melody_t paso_doble={
 
 
 /**
- *  Defines the robot speed according to his distance from the red object
- * 	Returns the speed
+ *  Defines the robot speed_correction according to his eccentricity from the red object
+ * 	Returns the speed_correction
  * 	distance : space between the red object and the robot
  */
 //simple PI regulator implementation
@@ -46,14 +54,12 @@ int16_t pi_regulator(uint16_t line){
 
 	float error = 0;
 	float speed_correction = 0;
-
-	static float sum_error = 0;
+	float sum_error = 0;
 
 	error = line - (IMAGE_BUFFER_SIZE/2);
 
 	//disables the PI regulator if the error is to small
-	//this avoids to always move as we cannot exactly be where we want and 
-	//the camera is a bit noisy
+	//this avoids to always move as we cannot exactly be where we want
 	if(fabs(error) < ROTATION_THRESHOLD){
 		return 0;
 	}
@@ -62,12 +68,12 @@ int16_t pi_regulator(uint16_t line){
 
 	//we set a maximum and a minimum for the sum to avoid an uncontrolled growth
 	if(sum_error > MAX_SUM_ERROR){
-		sum_error = MAX_SUM_ERROR;
+	sum_error = MAX_SUM_ERROR;
 	}else if(sum_error < -MAX_SUM_ERROR){
-		sum_error = -MAX_SUM_ERROR;
+	sum_error = -MAX_SUM_ERROR;
 	}
 
-	speed_correction = 1 * error;//+ KI * sum_error;
+	speed_correction = KP * error + KI * sum_error;
 
     return speed_correction;
 }
@@ -79,7 +85,7 @@ static THD_FUNCTION(PRegulator, arg) {
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
 
-    int16_t speed = 0;
+    int32_t speed = 0;
     int16_t speed_correction = 0;
     uint8_t rgb_state = 0, rgb_counter = 0;
     int8_t direct_rot=-1;
@@ -98,31 +104,32 @@ static THD_FUNCTION(PRegulator, arg) {
 						switch (get_obstacle()){
 							case 1:
 							case 8:
-							speed = -SPEED_VALUE;
+							speed = -SPEED_OBST_COEFF*((PROXIMITY_THRESHOLD-get_sensor_value())*SPEED_VALUE)/PROXIMITY_THRESHOLD;
 							speed_correction = 0;
 								break;
 
 							case 2:
 							case 3:
-							speed = SPEED_VALUE/2;
-							speed_correction = -4*ROTATION_SPEED;
+							speed = (get_sensor_value()*SPEED_VALUE)/PROXIMITY_THRESHOLD;
+							speed_correction = -ROT_OBST_COEFF*ROTATION_SPEED;
 								break;
 
 							case 6:
 							case 7:
-							speed = SPEED_VALUE/2;
-							speed_correction = 4*ROTATION_SPEED;
+							speed = (get_sensor_value()*SPEED_VALUE)/PROXIMITY_THRESHOLD;
+							speed_correction = ROT_OBST_COEFF*ROTATION_SPEED;
 								break;
 
 							case 4:
 							case 5:
-							speed = SPEED_VALUE;
+							speed = SPEED_OBST_COEFF*((PROXIMITY_THRESHOLD-get_sensor_value())*SPEED_VALUE)/PROXIMITY_THRESHOLD;
 							speed_correction = 0;
 								break;
 						}
 					}
 					//if no line and no obstacle in front, turn around
 					else if (!get_line_position()){
+						//blink RGB LED low frequency
 			            switch(rgb_state) {
 							case 0: // Red.
 								set_rgb_led(0, 10, 0, 0);
@@ -138,29 +145,31 @@ static THD_FUNCTION(PRegulator, arg) {
 								break;
 			            }
 						rgb_counter++;
-						if(rgb_counter == 100) {
+						if(rgb_counter == PERIOD) {
 							rgb_counter = 0;
 							rgb_state = (rgb_state+1)%2;
 						}
-
+						//turn around to observe
 						speed=0;
 						speed_correction = direct_rot*ROTATION_SPEED;
 					}
 
 					//if no obstacle or obstacle in front but with red line, go for the red
 					if(get_line_position() && !(1<get_obstacle() && get_obstacle()<8)){
-						if(get_front_sensor_value() > 100){
-							speed = MOTOR_SPEED_LIMIT;
-							speed_correction=0;
-
+						if(get_front_sensor_value() < THRESHOLD_DISTANCE_RED){
 							set_front_led(1);
 							//Switch on RGB LED in red
 							set_rgb_led(0, 10, 0, 0);
 							set_rgb_led(1, 10, 0, 0);
 							set_rgb_led(2, 10, 0, 0);
 							set_rgb_led(3, 10, 0, 0);
+
+							//set max speed for last run
+							speed = MOTOR_SPEED_LIMIT;
+							speed_correction=0;
 						}
 						else{
+							//blink RGB LED high frequency
 				            switch(rgb_state) {
 								case 0: // Red.
 									set_rgb_led(0, 10, 0, 0);
@@ -176,33 +185,32 @@ static THD_FUNCTION(PRegulator, arg) {
 									break;
 				            }
 							rgb_counter++;
-							if(rgb_counter == 50) {
+							if(rgb_counter == PERIOD/2) {
 								rgb_counter = 0;
 								rgb_state = (rgb_state+1)%2;
 							}
 
-								if(get_line_position()<(IMAGE_BUFFER_SIZE/2)){
-									direct_rot=-1;
-								}
-								else{
-									direct_rot=1;
+							//change the direction of rotation depending on the last red object seen
+							if(get_line_position()<(IMAGE_BUFFER_SIZE/2)){
+								direct_rot=-1;
+							}
+							else{
+								direct_rot=1;
 							}
 
 						//computes the speed to give to the motors
-						//distance_cm is modified by the image processing thread
 						speed = SPEED_VALUE;
-						//computes a correction factor to let the robot rotate to be in front of the line
+						//computes a correction factor to let the robot rotate to be in front of the red object
 						speed_correction = pi_regulator(get_line_position());
 						}
 					}
 
-					//applies the speed from the P regulator and the correction for the rotation
-
-
+					//set the wheels speed
 					right_motor_set_speed (speed - ROTATION_COEFF * speed_correction);
 					left_motor_set_speed (speed + ROTATION_COEFF * speed_correction);
 
-					if(get_line_position() && get_obstacle()==0 && get_front_sensor_value() > 100 ){
+					//if last run to the red object, start the melody and switch on the frond LED
+					if(get_line_position() && !(1<get_obstacle() && get_obstacle()<8) && get_front_sensor_value() < THRESHOLD_DISTANCE_RED){
 						playMelody(EXTERNAL_SONG, ML_SIMPLE_PLAY, &paso_doble);
 						waitMelodyHasFinished();
 						set_front_led(0);
